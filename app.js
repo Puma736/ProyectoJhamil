@@ -48,7 +48,8 @@ let cameraTargetPos = new THREE.Vector3(0, 15, 50);
 let cameraTargetPosOut = new THREE.Vector3(0, 26, 100); // Destino final más alejado
 
 let flowers = [], flowerMeshes = [];
-let solitaryRoseGroup, solitaryRoseMesh, solitaryTextSprite, solitaryParticles;
+let heartParticles, heartBasePositions = [];
+let centralRoseMesh, centralTextSprite;
 let galaxyParticles, galaxyData = [];
 let starParticles;
 let floatingTextElements = [];
@@ -213,7 +214,7 @@ function initThreeJS() {
     controls.dampingFactor = 0.05;
     controls.minDistance = 10;
     controls.maxDistance = 1000;
-    controls.target.set(0, 9.5, 0); // Mirar hacia el centro (donde está la rosa solitaria)
+    controls.target.set(0, 13.5, 0); // Mirar hacia el centro del corazón
     controls.enabled = false; // Bloquear controles de usuario hasta que termine la intro
 
     raycaster = new THREE.Raycaster();
@@ -222,7 +223,7 @@ function initThreeJS() {
     createLightsAndAurora();
     createStars();
     createGalaxy();
-    createSolitaryRose();
+    createHeart();
     createBackgroundFlowers(); // Añadido
     createFlowers();
 
@@ -464,106 +465,92 @@ function createGalaxy() {
     // Eliminado completamente el coreMesh base para quitar ese exceso de brillo blanco estático en el fondo
 }
 
-function createSolitaryRose() {
-    let group = new THREE.Group();
-    group.position.set(0, 9.5, 0);
+function createHeart() {
+    let count = isMobile ? CONFIG.heartParticleCountMobile : CONFIG.heartParticleCount;
+    let geo = new THREE.BufferGeometry();
+    let pos = new Float32Array(count * 3);
+    heartBasePositions = [];
 
-    // Halo luminoso dorado detrás de la rosa solitaria
-    let glowCanvas = document.createElement('canvas');
-    glowCanvas.width = 256; glowCanvas.height = 256;
-    let glowCtx = glowCanvas.getContext('2d');
-    let glowGrad = glowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    glowGrad.addColorStop(0, 'rgba(255, 225, 60, 0.7)');
-    glowGrad.addColorStop(0.35, 'rgba(255, 190, 0, 0.3)');
-    glowGrad.addColorStop(0.7, 'rgba(255, 160, 0, 0.08)');
-    glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    glowCtx.fillStyle = glowGrad; glowCtx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < count; i++) {
+        let t = (i / count) * Math.PI * 2;
+        let hx = 16 * Math.pow(Math.sin(t), 3);
+        let hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
 
-    let glowTex = new THREE.CanvasTexture(glowCanvas);
-    let glowMat = new THREE.MeshBasicMaterial({
-        map: glowTex, transparent: true, blending: THREE.AdditiveBlending,
-        depthWrite: false, side: THREE.DoubleSide
+        let scale = 0.65; // Un punto intermedio para que no sea tan gigante
+        let spread = 2.5; // Mantenemos el grosor
+        let px = hx * scale + (Math.random() - 0.5) * spread;
+        let py = hy * scale + (Math.random() - 0.5) * spread + 10; // Ajustado al tamaño
+        let pz = (Math.random() - 0.5) * spread;
+
+        pos[i * 3] = px; pos[i * 3 + 1] = py; pos[i * 3 + 2] = pz;
+        heartBasePositions.push({ x: px, y: py, z: pz });
+    }
+
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+    let canvas = document.createElement('canvas');
+    canvas.width = 32; canvas.height = 32;
+    let ctx = canvas.getContext('2d');
+    let grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, 'rgba(255,215,0,1)');
+    grad.addColorStop(1, 'rgba(255,215,0,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 32, 32);
+    let tex = new THREE.CanvasTexture(canvas);
+
+    let mat = new THREE.PointsMaterial({
+        size: 0.8, // Puntos dorados
+        color: 0xFFD700, map: tex,
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
     });
-    let glowMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), glowMat);
-    glowMesh.position.z = -0.15;
-    group.add(glowMesh);
 
-    // Malla principal de la Rosa Solitaria (usando la textura single.jpg)
+    heartParticles = new THREE.Points(geo, mat);
+    heartParticles.position.y = 4.5; // <-- Elevamos el corazón para separarlo de la galaxia
+    scene.add(heartParticles);
+
+    // Rosa solitaria pequeña en el centro interior del corazón
     let roseMat = new THREE.MeshBasicMaterial({
-        map: loadedTextures[1],
+        map: loadedTextures[1], // single.jpg
         transparent: true,
         side: THREE.DoubleSide,
         alphaTest: 0.05,
         depthWrite: false
     });
-    let roseMesh = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), roseMat);
-    group.add(roseMesh);
+    let roseSize = 5.2; // Tamaño armónico para entrar cómodamente dentro del corazón
+    let roseGeo = new THREE.PlaneGeometry(roseSize, roseSize);
+    centralRoseMesh = new THREE.Mesh(roseGeo, roseMat);
+    centralRoseMesh.position.set(0, 11.8, 0); // Ubicada en el centro interior del corazón
+    centralRoseMesh.userData = {
+        idx: 999,
+        scale: roseSize,
+        targetScale: roseSize
+    };
+    flowerMeshes.push(centralRoseMesh);
+    scene.add(centralRoseMesh);
 
-    // Luz cálida centrada en la rosa
-    let roseLight = new THREE.PointLight(0xFFD700, 3.0, 50);
-    roseLight.position.set(0, 0, 1.5);
-    group.add(roseLight);
-
-    // Polvo de estrellas doradas orbitando la rosa
-    let pCount = isMobile ? 120 : 260;
-    let pGeo = new THREE.BufferGeometry();
-    let pPos = new Float32Array(pCount * 3);
-    for (let i = 0; i < pCount; i++) {
-        let ang = Math.random() * Math.PI * 2;
-        let dist = 4.2 + Math.random() * 4.2;
-        pPos[i * 3] = Math.cos(ang) * dist;
-        pPos[i * 3 + 1] = (Math.random() - 0.5) * 6;
-        pPos[i * 3 + 2] = Math.sin(ang) * dist;
-    }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    let pMat = new THREE.PointsMaterial({
-        size: 0.7,
-        color: 0xFFF2A0,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-    let roseParticles = new THREE.Points(pGeo, pMat);
-    group.add(roseParticles);
-
-    // Texto 3D flotante: "Amistad 🌻"
+    // Texto "Amigos 🌻" ubicado dentro del corazón, arriba de la rosa
     let canvasText = document.createElement('canvas');
     canvasText.width = 1024;
     canvasText.height = 256;
     let ctxText = canvasText.getContext('2d');
     ctxText.fillStyle = "rgba(0,0,0,0)";
     ctxText.fillRect(0, 0, 1024, 256);
-    ctxText.font = "bold 130px 'Dancing Script', Arial, sans-serif";
+    ctxText.font = "bold 125px 'Dancing Script', Arial, sans-serif";
     ctxText.textAlign = "center";
     ctxText.textBaseline = "middle";
     ctxText.fillStyle = "#FFFFFF";
     ctxText.shadowColor = "#FFD700";
-    ctxText.shadowBlur = 24;
-    ctxText.fillText("Amistad 🌻", 512, 128);
+    ctxText.shadowBlur = 22;
+    ctxText.fillText("Amigos 🌻", 512, 128);
 
     let texText = new THREE.CanvasTexture(canvasText);
     texText.needsUpdate = true;
     let matText = new THREE.SpriteMaterial({
         map: texText, transparent: true, depthWrite: false
     });
-    let textSprite = new THREE.Sprite(matText);
-    textSprite.scale.set(16, 4, 1);
-    textSprite.position.set(0, 6.8, 0); // Flotando encima de la rosa
-    group.add(textSprite);
-
-    // Interacción al tocar la rosa solitaria
-    roseMesh.userData = {
-        idx: 999,
-        scale: 10,
-        targetScale: 10
-    };
-    flowerMeshes.push(roseMesh);
-
-    solitaryRoseGroup = group;
-    solitaryRoseMesh = roseMesh;
-    solitaryTextSprite = textSprite;
-    solitaryParticles = roseParticles;
-    scene.add(group);
+    centralTextSprite = new THREE.Sprite(matText);
+    centralTextSprite.scale.set(12, 3, 1); // Proporción perfecta para encajar dentro del corazón
+    centralTextSprite.position.set(0, 15.8, 0.1); // Arriba de la rosa, dentro de la silueta del corazón
+    scene.add(centralTextSprite);
 }
 
 function createBackgroundFlowers() {
@@ -825,8 +812,8 @@ function openCard(idx) {
     let msg;
     if (idx === 999) {
         msg = {
-            title: "Amistad sincera 🌻",
-            text: "Una rosa solitaria en medio del universo como detalle especial para celebrar una amistad bonita, alegre y sincera. ¡Gracias por tu gran amistad, Juany!"
+            title: "Amigos de corazón 🌻",
+            text: "Una amistad sincera, alegre y especial. ¡Gracias por tu gran amistad y buena vibra de siempre, Juany!"
         };
     } else {
         msg = MESSAGES[idx % MESSAGES.length];
@@ -886,20 +873,28 @@ function animate() {
 
     // La galaxia ahora es estática por petición del usuario (ahorra muchísimo rendimiento)
 
-    // Animar Rosa Solitaria central y texto "Amistad 🌻"
-    if (solitaryRoseGroup) {
-        solitaryRoseGroup.lookAt(camera.position); // Mira suavemente hacia la cámara
-        let floatY = 9.5 + Math.sin(t * 1.5) * 0.45;
-        solitaryRoseGroup.position.y = floatY;
+    // Animate Heart (latido armónico del corazón, rosa pequeña y texto Amigos)
+    if (heartParticles) {
+        let pos = heartParticles.geometry.attributes.position.array;
+        let pulse = 1 + Math.sin(t * 3) * 0.05;
+        for (let i = 0; i < heartBasePositions.length; i++) {
+            let base = heartBasePositions[i];
+            pos[i * 3] = base.x * pulse;
+            pos[i * 3 + 1] = base.y * pulse;
+            pos[i * 3 + 2] = base.z * pulse;
+        }
+        heartParticles.geometry.attributes.position.needsUpdate = true;
 
-        if (solitaryParticles) {
-            solitaryParticles.rotation.y = t * 0.25;
-            solitaryParticles.rotation.z = t * 0.12;
+        // Latido y orientación de la rosa solitaria pequeña dentro del corazón
+        if (centralRoseMesh) {
+            centralRoseMesh.lookAt(camera.position);
+            let s = 5.2 * pulse;
+            centralRoseMesh.scale.set(s, s, s);
         }
 
-        if (solitaryTextSprite) {
-            let pulse = 1 + Math.sin(t * 2.2) * 0.04;
-            solitaryTextSprite.scale.set(16 * pulse, 4 * pulse, 1);
+        // Latido del texto "Amigos 🌻" dentro del corazón
+        if (centralTextSprite) {
+            centralTextSprite.scale.set(12 * pulse, 3 * pulse, 1);
         }
     }
 
