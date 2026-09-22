@@ -107,12 +107,12 @@ function startExperience() {
             setTimeout(() => {
                 document.getElementById('canvas-wrap').classList.add('show');
                 document.getElementById('btn-music').classList.add('show');
-            }, 500);
+            }, 400);
             
-            // Esperar a que la pantalla aclare antes de arrancar el motor de zoom
+            // Arrancar el motor de zoom más rápido
             setTimeout(() => {
                 isZoomingIn = true; 
-            }, 1800);
+            }, 800);
         });
     } catch (e) {
         alert('Error en startExperience: ' + e.message);
@@ -823,16 +823,16 @@ function animate() {
     let t = clock.getElapsedTime();
 
     if (isZoomingIn) {
-        // Velocidad ajustada para un viaje rápido pero cinematográfico (0.012)
-        camera.position.lerp(cameraTargetPos, 0.012); 
-        if (camera.position.distanceTo(cameraTargetPos) < 1.0) {
+        // Velocidad aumentada para un viaje de zoom más rápido y dinámico (0.026)
+        camera.position.lerp(cameraTargetPos, 0.026); 
+        if (camera.position.distanceTo(cameraTargetPos) < 1.5) {
             isZoomingIn = false;
             isZoomingOut = true; // Inicia el alejamiento sutil final
         }
     } else if (isZoomingOut) {
-        // Alejamiento suave y lento para encuadrar la galaxia (0.005)
-        camera.position.lerp(cameraTargetPosOut, 0.005);
-        if (camera.position.distanceTo(cameraTargetPosOut) < 0.5) {
+        // Alejamiento suave pero más ágil para encuadrar la galaxia (0.015)
+        camera.position.lerp(cameraTargetPosOut, 0.015);
+        if (camera.position.distanceTo(cameraTargetPosOut) < 0.8) {
             isZoomingOut = false;
             controls.enabled = true; // Habilitar controles al terminar toda la cinemática
         }
