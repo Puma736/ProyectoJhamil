@@ -45,7 +45,7 @@ let mouseTarget = { x: 0, y: 0 };
 let isZoomingIn = false;
 let isZoomingOut = false;
 let cameraTargetPos = new THREE.Vector3(0, 15, 50);
-let cameraTargetPosOut = new THREE.Vector3(0, 20, 70); // Destino final más alejado
+let cameraTargetPosOut = new THREE.Vector3(0, 26, 100); // Destino final más alejado
 
 let flowers = [], flowerMeshes = [];
 let heartParticles, heartBasePositions = [];
@@ -504,33 +504,6 @@ function createHeart() {
     heartParticles = new THREE.Points(geo, mat);
     heartParticles.position.y = 4.5; // <-- Elevamos el corazón para separarlo de la galaxia
     scene.add(heartParticles);
-
-    // Texto central del corazón como Sprite 3D (Alta resolución)
-    let canvasText = document.createElement('canvas');
-    canvasText.width = 1024;
-    canvasText.height = 256;
-    let ctxText = canvasText.getContext('2d');
-    ctxText.fillStyle = "rgba(0,0,0,0)";
-    ctxText.fillRect(0, 0, 1024, 256);
-    ctxText.font = "bold 120px 'Dancing Script', Arial, sans-serif";
-    ctxText.textAlign = "center";
-    ctxText.textBaseline = "middle";
-    ctxText.fillStyle = "#FFFFFF";
-    ctxText.shadowColor = "#FFD700";
-    ctxText.shadowBlur = 20;
-    ctxText.fillText("Te quiero ❤️", 512, 128);
-    
-    let texText = new THREE.CanvasTexture(canvasText);
-    texText.needsUpdate = true;
-    let matText = new THREE.SpriteMaterial({ 
-        map: texText, transparent: true, depthWrite: false 
-    });
-    let heartTextSprite = new THREE.Sprite(matText);
-    heartTextSprite.scale.set(24, 6, 1); // Texto un poco más chico para encajar
-    heartTextSprite.position.set(0, 13.5, 0); // Ajustado al centro del nuevo corazón
-    
-    window.heartTextSprite = heartTextSprite;
-    scene.add(heartTextSprite);
 }
 
 function createBackgroundFlowers() {
@@ -856,11 +829,6 @@ function animate() {
             pos[i * 3 + 2] = base.z * pulse;
         }
         heartParticles.geometry.attributes.position.needsUpdate = true;
-        
-        // Latido del texto 3D del corazón
-        if (window.heartTextSprite) {
-            window.heartTextSprite.scale.set(24 * pulse, 6 * pulse, 1);
-        }
     }
 
     // Flowers (Hover y Billboard)
