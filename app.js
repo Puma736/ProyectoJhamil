@@ -17,20 +17,20 @@ const CONFIG = {
 };
 
 const MESSAGES = [
-    { title: "Para mi gran amiga Laura 💛", text: "Quería dejarte estas palabras, Laura, para recordarte lo mucho que valoro nuestra amistad." },
-    { title: "Eres genial Estefany 🌼", text: "Tu energía y tu forma de ser iluminan cualquier lugar. ¡Nunca cambies!" },
-    { title: "Gracias por estar ahí 🌻", text: "Gracias por escucharme siempre, Laura, y ser un apoyo incondicional en todo momento." },
-    { title: "Grandes amigos ✨", text: "Hay personas que llegan a tu vida y la mejoran por completo. Tú eres una de ellas, Estefany." },
-    { title: "Momentos únicos 🌷", text: "Espero que sigamos coleccionando aventuras y risas juntos por mucho tiempo más, Laura Estefany." },
-    { title: "Qué suerte la mía 🍀", text: "Tener una amiga como tú es de las mejores cosas que me han pasado." },
-    { title: "Eres incondicional 🌸", text: "En las buenas y en las malas, sé que siempre puedo contar con tu amistad, Laura." },
-    { title: "La mejor amiga 🌻", text: "Cada día agradezco poder compartir tantas locuras y buenos momentos contigo, Estefany." }
+    { title: "Un detalle para ti 🌻", text: "Quería regalarte este pequeño detalle de flores amarillas, Juany, para sacarte una sonrisa y desearte un día genial." },
+    { title: "Buena vibra ✨", text: "Tu alegría y tu forma de ser siempre transmiten buena energía. ¡Que nunca se apague esa chispa!" },
+    { title: "Gran amistad 🌼", text: "Aprecio mucho compartir buenos momentos, risas y anécdotas contigo, Juany. ¡Gracias por tu linda amistad!" },
+    { title: "Muchos éxitos 🍀", text: "Te deseo siempre lo mejor en cada meta que te propongas. Que sigan viniendo cosas muy buenas para ti." },
+    { title: "Sonrisas y alegría 🌷", text: "Que hoy y siempre tengas mil motivos para sonreír y pasarla bien. ¡Un abrazo con mucho cariño!" },
+    { title: "Siempre genial 🌸", text: "Es muy lindo contar con amigas tan sinceras, auténticas y divertidas. Gracias por ser siempre tú misma, Juany." },
+    { title: "Flores amarillas ☀️", text: "Dicen que las flores amarillas llenan el día de luz y optimismo... así que aquí tienes un jardín entero para ti." },
+    { title: "Con mucho aprecio 🌻", text: "Para una gran amiga: gracias por la confianza, las risas y la buena compañía de siempre. ¡Que tengas un día increíble!" }
 ];
 
 const FLOATING_TEXTS = [
-    "Mejor amiga 💛🌻", "Vales oro 🌻", "Grandes amigos 🌻", "Eres única 🌻",
-    "BFF 💛", "Eres genial 🌻", "Siempre juntos 💛", "Gran amiga 🌻",
-    "Increíble 🌻", "Incondicional 🌻", "Te aprecio 💛", "Para ti amiga 🌻"
+    "Para Juany 🌻", "Buena vibra ✨", "Gran amiga 🌻", "Eres genial 🌻",
+    "Sonríe siempre 💛", "Con cariño 🌻", "Mucha luz ☀️", "Un detalle especial 🌻",
+    "Alegría ✨", "Se te aprecia 💛", "Muchos éxitos 🍀", "Para ti 🌻"
 ];
 
 const FLOWER_IMAGES = [
