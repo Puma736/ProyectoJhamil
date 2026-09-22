@@ -614,19 +614,30 @@ function createFlowers() {
         // Textos flotantes como Sprites 3D hijos de la flor
         if (hasLabel) {
             let canvasText = document.createElement('canvas');
-            canvasText.width = 512;
-            canvasText.height = 128;
+            canvasText.width = 1024;
+            canvasText.height = 256;
             let ctxText = canvasText.getContext('2d');
             ctxText.fillStyle = "rgba(0,0,0,0)";
-            ctxText.fillRect(0, 0, 512, 128);
-            ctxText.font = "bold 80px 'Dancing Script', Arial, sans-serif";
+            ctxText.fillRect(0, 0, 1024, 256);
+            
+            let textStr = FLOATING_TEXTS[i % FLOATING_TEXTS.length];
+            let fontSize = 85;
+            ctxText.font = `bold ${fontSize}px 'Dancing Script', Arial, sans-serif`;
+            let textWidth = ctxText.measureText(textStr).width;
+            
+            // Asegurar que el texto y sus sombras/adornos quepan completos sin ningún recorte
+            while (textWidth > 860 && fontSize > 40) {
+                fontSize -= 4;
+                ctxText.font = `bold ${fontSize}px 'Dancing Script', Arial, sans-serif`;
+                textWidth = ctxText.measureText(textStr).width;
+            }
+
             ctxText.textAlign = "center";
             ctxText.textBaseline = "middle";
             ctxText.fillStyle = "#FFFFFF";
             ctxText.shadowColor = "#FFD700";
-            ctxText.shadowBlur = 10;
-            let textStr = FLOATING_TEXTS[i % FLOATING_TEXTS.length];
-            ctxText.fillText(textStr, 256, 64);
+            ctxText.shadowBlur = 15;
+            ctxText.fillText(textStr, 512, 128);
             
             let texText = new THREE.CanvasTexture(canvasText);
             texText.needsUpdate = true;
@@ -635,8 +646,8 @@ function createFlowers() {
             });
             let textSprite = new THREE.Sprite(matText);
             
-            // Tamaño más legible
-            textSprite.scale.set(4, 1, 1);
+            // Tamaño legible con proporción 4:1
+            textSprite.scale.set(4.2, 1.05, 1);
             
             // Posición dinámica: siempre por encima del borde superior de la flor
             // La flor mide 'size' de alto, por lo que su borde superior en coords locales es size/2.
