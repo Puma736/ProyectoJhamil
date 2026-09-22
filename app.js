@@ -49,7 +49,7 @@ let cameraTargetPosOut = new THREE.Vector3(0, 26, 100); // Destino final más al
 
 let flowers = [], flowerMeshes = [];
 let heartParticles, heartBasePositions = [];
-let centralRoseMesh, centralTextSprite;
+let centralTextSprite;
 let galaxyParticles, galaxyData = [];
 let starParticles;
 let floatingTextElements = [];
@@ -507,27 +507,7 @@ function createHeart() {
     heartParticles.position.y = 4.5; // <-- Elevamos el corazón para separarlo de la galaxia
     scene.add(heartParticles);
 
-    // Rosa solitaria pequeña en el centro interior del corazón
-    let roseMat = new THREE.MeshBasicMaterial({
-        map: loadedTextures[1], // single.jpg
-        transparent: true,
-        side: THREE.DoubleSide,
-        alphaTest: 0.05,
-        depthWrite: false
-    });
-    let roseSize = 5.2; // Tamaño armónico para entrar cómodamente dentro del corazón
-    let roseGeo = new THREE.PlaneGeometry(roseSize, roseSize);
-    centralRoseMesh = new THREE.Mesh(roseGeo, roseMat);
-    centralRoseMesh.position.set(0, 11.8, 0); // Ubicada en el centro interior del corazón
-    centralRoseMesh.userData = {
-        idx: 999,
-        scale: roseSize,
-        targetScale: roseSize
-    };
-    flowerMeshes.push(centralRoseMesh);
-    scene.add(centralRoseMesh);
-
-    // Texto "Amigos 🌻" ubicado dentro del corazón, arriba de la rosa
+    // Texto "Amigos 🌻" ubicado en el centro del corazón
     let canvasText = document.createElement('canvas');
     canvasText.width = 1024;
     canvasText.height = 256;
@@ -548,8 +528,8 @@ function createHeart() {
         map: texText, transparent: true, depthWrite: false
     });
     centralTextSprite = new THREE.Sprite(matText);
-    centralTextSprite.scale.set(12, 3, 1); // Proporción perfecta para encajar dentro del corazón
-    centralTextSprite.position.set(0, 15.8, 0.1); // Arriba de la rosa, dentro de la silueta del corazón
+    centralTextSprite.scale.set(16, 4, 1);
+    centralTextSprite.position.set(0, 13.5, 0); // En el centro del corazón
     scene.add(centralTextSprite);
 }
 
@@ -809,15 +789,7 @@ function onFlowerPointerDown(e) {
 function openCard(idx) {
     isCardOpen = true;
     if (controls) controls.enabled = false; // Pausar rotación mientras la carta está abierta
-    let msg;
-    if (idx === 999) {
-        msg = {
-            title: "Amigos de corazón 🌻",
-            text: "Una amistad sincera, alegre y especial. ¡Gracias por tu gran amistad y buena vibra de siempre, Juany!"
-        };
-    } else {
-        msg = MESSAGES[idx % MESSAGES.length];
-    }
+    let msg = MESSAGES[idx % MESSAGES.length];
     document.getElementById('card-title').textContent = msg.title;
     document.getElementById('card-msg').textContent = msg.text;
     document.getElementById('card-overlay').classList.add('show');
@@ -885,16 +857,9 @@ function animate() {
         }
         heartParticles.geometry.attributes.position.needsUpdate = true;
 
-        // Latido y orientación de la rosa solitaria pequeña dentro del corazón
-        if (centralRoseMesh) {
-            centralRoseMesh.lookAt(camera.position);
-            let s = 5.2 * pulse;
-            centralRoseMesh.scale.set(s, s, s);
-        }
-
         // Latido del texto "Amigos 🌻" dentro del corazón
         if (centralTextSprite) {
-            centralTextSprite.scale.set(12 * pulse, 3 * pulse, 1);
+            centralTextSprite.scale.set(16 * pulse, 4 * pulse, 1);
         }
     }
 
