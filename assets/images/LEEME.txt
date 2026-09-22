@@ -1,0 +1,3 @@
+Coloca aquí imágenes adicionales si las necesitas.
+
+Esta carpeta es opcional y se usa para recursos extra del proyecto.

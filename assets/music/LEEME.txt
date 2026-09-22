@@ -1,0 +1,5 @@
+Coloca aquí tu archivo de música de fondo.
+
+El archivo debe llamarse: background.mp3
+
+Si no colocas ningún archivo, la página funcionará normalmente sin música.
