@@ -43,7 +43,9 @@ let scene, camera, renderer, clock, controls;
 let raycaster, pointerNDC;
 let mouseTarget = { x: 0, y: 0 };
 let isZoomingIn = false;
+let isZoomingOut = false;
 let cameraTargetPos = new THREE.Vector3(0, 15, 50);
+let cameraTargetPosOut = new THREE.Vector3(0, 20, 70); // Destino final más alejado
 
 let flowers = [], flowerMeshes = [];
 let heartParticles, heartBasePositions = [];
@@ -62,7 +64,7 @@ if (document.readyState === 'loading') {
 
 function initApp() {
     try {
-        isMobile = window.innerWidth <= 768;
+        isMobile = (window.innerWidth <= 768) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         let btn = document.getElementById('enter-btn');
         if (btn) {
             btn.addEventListener('click', startExperience);
@@ -94,6 +96,10 @@ function initApp() {
 
 function startExperience() {
     try {
+        let audio = document.getElementById('bg-audio');
+        if (audio && audio.paused) {
+            audio.play().catch(e => console.log("Audio play on enter:", e));
+        }
         document.getElementById('intro').classList.add('hidden');
         loadTextures(() => {
             initThreeJS();
@@ -222,9 +228,20 @@ function initThreeJS() {
 
     window.addEventListener('resize', onResize);
     window.addEventListener('pointermove', onPointerMove);
-    renderer.domElement.addEventListener('pointerdown', onClick);
+
+    // Detección táctil y de clic instantánea y optimizada para Android y móviles
+    renderer.domElement.addEventListener('touchstart', onFlowerTouchStart, { passive: false, capture: true });
+    renderer.domElement.addEventListener('pointerdown', onFlowerPointerDown, { capture: true });
 
     document.getElementById('btn-close').addEventListener('click', closeCard);
+
+    // Cerrar también tocando fuera de la tarjeta (fondo oscuro)
+    let cardOverlay = document.getElementById('card-overlay');
+    if (cardOverlay) {
+        cardOverlay.addEventListener('click', (e) => {
+            if (e.target.id === 'card-overlay') closeCard();
+        });
+    }
 
     animate();
 }
@@ -637,29 +654,130 @@ function createFlowers() {
 
 
 function onResize() {
+    isMobile = (window.innerWidth <= 768) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function onPointerMove(e) {
-    mouseTarget.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mouseTarget.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    pointerNDC.copy(mouseTarget);
+function getEventCoordinates(e) {
+    if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    if (e.changedTouches && e.changedTouches.length > 0) {
+        return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    }
+    if (e.clientX !== undefined && e.clientY !== undefined) {
+        return { x: e.clientX, y: e.clientY };
+    }
+    return null;
 }
 
-function onClick() {
-    if (isCardOpen) return;
-    raycaster.setFromCamera(pointerNDC, camera);
-    let hits = raycaster.intersectObjects(flowerMeshes);
+function updatePointerNDC(clientX, clientY) {
+    if (!renderer || !renderer.domElement) return;
+    let rect = renderer.domElement.getBoundingClientRect();
+    pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    mouseTarget.x = pointerNDC.x;
+    mouseTarget.y = pointerNDC.y;
+}
+
+function onPointerMove(e) {
+    let coords = getEventCoordinates(e);
+    if (!coords) return;
+    updatePointerNDC(coords.x, coords.y);
+}
+
+function findFlowerAtCoordinates(clientX, clientY) {
+    if (!renderer || !renderer.domElement || !camera) return null;
+    let rect = renderer.domElement.getBoundingClientRect();
+    let ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+    let ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    // 1. Raycast directo (con recursive=true para detectar la flor o su texto 3D hijo)
+    let tempRay = new THREE.Raycaster();
+    tempRay.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    let hits = tempRay.intersectObjects(flowerMeshes, true);
+
     if (hits.length > 0) {
-        let idx = hits[0].object.userData.idx;
+        for (let i = 0; i < hits.length; i++) {
+            let obj = hits[i].object;
+            if (obj.userData && obj.userData.idx !== undefined && obj.userData.idx >= 0) {
+                return obj.userData.idx;
+            }
+            if (obj.parent && obj.parent.userData && obj.parent.userData.idx !== undefined && obj.parent.userData.idx >= 0) {
+                return obj.parent.userData.idx;
+            }
+        }
+    }
+
+    // 2. Detección por proximidad táctil en pantalla (Crucial para dedos en Android)
+    // El área de contacto de un dedo es mayor que un píxel de mouse (~55px)
+    let touchThreshold = isMobile ? 55 : 30; // Radio generoso en píxeles de pantalla
+    let closestIdx = null;
+    let closestDist = Infinity;
+    let tempV = new THREE.Vector3();
+
+    for (let i = 0; i < flowerMeshes.length; i++) {
+        let fMesh = flowerMeshes[i];
+        fMesh.getWorldPosition(tempV);
+        tempV.project(camera);
+
+        // Solo considerar flores que estén frente a la cámara (z entre 0 y 1)
+        if (tempV.z > 0 && tempV.z < 1) {
+            let screenX = (tempV.x * 0.5 + 0.5) * rect.width + rect.left;
+            let screenY = (-tempV.y * 0.5 + 0.5) * rect.height + rect.top;
+            let dist = Math.hypot(clientX - screenX, clientY - screenY);
+
+            if (dist < touchThreshold && dist < closestDist) {
+                closestDist = dist;
+                closestIdx = fMesh.userData.idx;
+            }
+        }
+    }
+
+    return closestIdx;
+}
+
+let lastInteractionTime = 0;
+
+function handleFlowerPress(e) {
+    if (isCardOpen) return;
+    let now = Date.now();
+    if (now - lastInteractionTime < 350) return; // Evitar dobles disparos en touch
+
+    let coords = getEventCoordinates(e);
+    if (!coords) return;
+
+    updatePointerNDC(coords.x, coords.y);
+
+    let idx = findFlowerAtCoordinates(coords.x, coords.y);
+    if (idx !== null && idx >= 0) {
+        lastInteractionTime = now;
         openCard(idx);
+
+        // Detener propagación para que OrbitControls no mueva la cámara al presionar la flor
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.cancelable && e.preventDefault) e.preventDefault();
+    }
+}
+
+function onFlowerTouchStart(e) {
+    // Disparo inmediato al presionar la flor con el dedo en móviles Android
+    handleFlowerPress(e);
+}
+
+function onFlowerPointerDown(e) {
+    // Para mouse de escritorio o stylus
+    if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+        handleFlowerPress(e);
     }
 }
 
 function openCard(idx) {
     isCardOpen = true;
+    if (controls) controls.enabled = false; // Pausar rotación mientras la carta está abierta
     let msg = MESSAGES[idx % MESSAGES.length];
     document.getElementById('card-title').textContent = msg.title;
     document.getElementById('card-msg').textContent = msg.text;
@@ -669,6 +787,9 @@ function openCard(idx) {
 function closeCard() {
     isCardOpen = false;
     document.getElementById('card-overlay').classList.remove('show');
+    if (controls && !isZoomingIn && !isZoomingOut) {
+        controls.enabled = true;
+    }
 }
 
 function setupAudio() {
@@ -695,7 +816,14 @@ function animate() {
         camera.position.lerp(cameraTargetPos, 0.012); 
         if (camera.position.distanceTo(cameraTargetPos) < 1.0) {
             isZoomingIn = false;
-            controls.enabled = true; // Habilitar controles cuando llega a destino
+            isZoomingOut = true; // Inicia el alejamiento sutil final
+        }
+    } else if (isZoomingOut) {
+        // Alejamiento suave y lento para encuadrar la galaxia (0.005)
+        camera.position.lerp(cameraTargetPosOut, 0.005);
+        if (camera.position.distanceTo(cameraTargetPosOut) < 0.5) {
+            isZoomingOut = false;
+            controls.enabled = true; // Habilitar controles al terminar toda la cinemática
         }
     }
 
@@ -726,8 +854,16 @@ function animate() {
 
     // Flowers (Hover y Billboard)
     raycaster.setFromCamera(pointerNDC, camera);
-    let hits = raycaster.intersectObjects(flowerMeshes);
-    let hoveredIdx = hits.length > 0 ? hits[0].object.userData.idx : -1;
+    let hits = raycaster.intersectObjects(flowerMeshes, true);
+    let hoveredIdx = -1;
+    if (hits.length > 0) {
+        let obj = hits[0].object;
+        if (obj.userData && obj.userData.idx !== undefined && obj.userData.idx >= 0) {
+            hoveredIdx = obj.userData.idx;
+        } else if (obj.parent && obj.parent.userData && obj.parent.userData.idx !== undefined && obj.parent.userData.idx >= 0) {
+            hoveredIdx = obj.parent.userData.idx;
+        }
+    }
 
     flowers.forEach(f => {
         let d = f.userData;
